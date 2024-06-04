@@ -6,7 +6,7 @@
 
 * Parse Cue Sheet files into structured data.
 * Generate Cue Sheet files from structured data.
-* Extract track information such as title, performer, index points, and more.
+* Extract track information such as title, performer, index points, etc.
 * Validate Cue Sheet files for syntax errors and compliance with the Cue Sheet specification.
 
 ## Installation
