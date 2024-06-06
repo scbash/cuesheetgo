@@ -1,21 +1,26 @@
 package cuesheetgo
 
 import (
+	"embed"
 	"errors"
 	"fmt"
-	"os"
+	"io"
+	"io/fs"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+//go:embed testdata
+var testdataFS embed.FS
+
 type testCase struct {
-	name         string
-	path         string
-	cueSheetData string
-	expected     CueSheet
-	expectedErr  error
+	name        string
+	input       io.Reader
+	expected    CueSheet
+	expectedErr error
 }
 
 var minimalCueSheet = CueSheet{
@@ -32,22 +37,22 @@ func TestParseCueSheets(t *testing.T) {
 	tcs := []testCase{
 		{
 			name:     "MinimalCueSheet",
-			path:     "minimal.cue",
+			input:    open(t, "minimal.cue"),
 			expected: minimalCueSheet,
 		},
 		{
 			name:        "EmptyCueSheet",
-			path:        "empty.cue",
+			input:       open(t, "empty.cue"),
 			expectedErr: errors.New("missing file name"),
 		},
 		{
 			name:        "UnexpectedCommand",
-			path:        path.Join("command", "unexpected.cue"),
+			input:       open(t, path.Join("command", "unexpected.cue")),
 			expectedErr: errors.New("unexpected command: UNSUPPORTED"),
 		},
 		{
 			name:        "InsufficientLineFields",
-			path:        path.Join("command", "insufficient.cue"),
+			input:       open(t, path.Join("command", "insufficient.cue")),
 			expectedErr: errors.New("expected at least 2 fields, got 1"),
 		},
 	}
@@ -61,22 +66,22 @@ func TestParseFileCommand(t *testing.T) {
 	tcs := []testCase{
 		{
 			name:        "RepeatedFileCommand",
-			path:        path.Join("file", "repeated.cue"),
+			input:       open(t, path.Join("file", "repeated.cue")),
 			expectedErr: errors.New("field already set: WAVE"),
 		},
 		{
 			name:        "InsufficientFileParams",
-			path:        path.Join("file", "insufficient.cue"),
+			input:       open(t, path.Join("file", "insufficient.cue")),
 			expectedErr: errors.New("expected 2 parameters, got 1"),
 		},
 		{
 			name:        "ExcessiveFileParams",
-			path:        path.Join("file", "excessive.cue"),
+			input:       open(t, path.Join("file", "excessive.cue")),
 			expectedErr: errors.New("expected 2 parameters, got 3"),
 		},
 		{
 			name:        "EmptyFileName",
-			path:        path.Join("file", "empty_name.cue"),
+			input:       open(t, path.Join("file", "empty_name.cue")),
 			expectedErr: errors.New("missing file name"),
 		},
 	}
@@ -89,18 +94,33 @@ func TestParseTrackCommand(t *testing.T) {
 	tcs := []testCase{
 		{
 			name:        "InsufficientTrackParams",
-			path:        path.Join("track", "insufficient.cue"),
+			input:       open(t, path.Join("track", "insufficient.cue")),
 			expectedErr: errors.New("expected 2 parameters, got 1"),
 		},
 		{
 			name:        "ExcessiveTrackParams",
-			path:        path.Join("track", "excessive.cue"),
+			input:       open(t, path.Join("track", "excessive.cue")),
 			expectedErr: errors.New("expected 2 parameters, got 3"),
 		},
 		{
 			name:        "MissingTracks",
-			path:        path.Join("track", "missing.cue"),
+			input:       open(t, path.Join("track", "missing.cue")),
 			expectedErr: errors.New("missing tracks"),
+		},
+		{
+			name:        "UnorderedTracks",
+			input:       open(t, path.Join("track", "unordered.cue")),
+			expectedErr: errors.New("expected track number 1, got 2"),
+		},
+		{
+			name:        "NonNumericTrackNumber",
+			input:       open(t, path.Join("track", "non_numeric.cue")),
+			expectedErr: errors.New("failed to parse track number"),
+		},
+		{
+			name:        "ExceedsMaxTracks",
+			input:       strings.NewReader(generateExceedsMaxTracks()),
+			expectedErr: errors.New("cannot have more than 99 tracks"),
 		},
 	}
 	for _, tc := range tcs {
@@ -110,16 +130,9 @@ func TestParseTrackCommand(t *testing.T) {
 
 func runTest(tc testCase) func(t *testing.T) {
 	return func(t *testing.T) {
-		cwd, err := os.Getwd()
-		require.NoError(t, err)
-		p := path.Join(cwd, "testdata", tc.path)
-		file, err := os.Open(p)
-		require.NoError(t, err)
-		defer func() {
-			require.NoError(t, file.Close())
-		}()
-		cueSheet, err := Parse(file)
+		cueSheet, err := Parse(tc.input)
 		if tc.expectedErr != nil {
+			require.Error(t, err)
 			require.Contains(t, err.Error(), tc.expectedErr.Error())
 			fmt.Println(err)
 			return
@@ -127,4 +140,21 @@ func runTest(tc testCase) func(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, tc.expected, *cueSheet)
 	}
+}
+
+func open(t *testing.T, p string) fs.File {
+	file, err := testdataFS.Open(path.Join("testdata", p))
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, file.Close())
+	})
+	return file
+}
+
+func generateExceedsMaxTracks() string {
+	cueSheet := fmt.Sprintf("FILE test.flac WAVE\n")
+	for i := range maxTracks + 1 {
+		cueSheet += fmt.Sprintf("TRACK %02d AUDIO\n", i+1)
+	}
+	return cueSheet
 }

@@ -1,0 +1,2 @@
+FILE "sample.flac" WAVE
+TRACK 02 AUDIO
