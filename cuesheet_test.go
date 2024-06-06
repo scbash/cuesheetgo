@@ -21,6 +21,11 @@ type testCase struct {
 var minimalCueSheet = CueSheet{
 	FileName: "sample.flac",
 	Format:   "WAVE",
+	Tracks: []Track{
+		{
+			Type: "AUDIO",
+		},
+	},
 }
 
 func TestParseCueSheets(t *testing.T) {
@@ -73,6 +78,29 @@ func TestParseFileCommand(t *testing.T) {
 			name:        "EmptyFileName",
 			path:        path.Join("file", "empty_name.cue"),
 			expectedErr: errors.New("missing file name"),
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, runTest(tc))
+	}
+}
+
+func TestParseTrackCommand(t *testing.T) {
+	tcs := []testCase{
+		{
+			name:        "InsufficientTrackParams",
+			path:        path.Join("track", "insufficient.cue"),
+			expectedErr: errors.New("expected 2 parameters, got 1"),
+		},
+		{
+			name:        "ExcessiveTrackParams",
+			path:        path.Join("track", "excessive.cue"),
+			expectedErr: errors.New("expected 2 parameters, got 3"),
+		},
+		{
+			name:        "MissingTracks",
+			path:        path.Join("track", "missing.cue"),
+			expectedErr: errors.New("missing tracks"),
 		},
 	}
 	for _, tc := range tcs {

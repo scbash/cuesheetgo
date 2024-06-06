@@ -7,27 +7,38 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
+const (
+	// trimChars contains the characters to be trimmed from a string.
+	// These are: space, double quote, tab, newline.
+	trimChars = ` ` + `"` + `\t` + `\n`
+
+	fileParams = 2
+
+	maxTracks = 99
+)
+
+// Track represents a single track in a cue sheet file.
+// Required fields: Type.
+type Track struct {
+	Type string
+}
+
 // CueSheet represents the contents of a cue sheet file.
-// Required fields: FileName, Format.
+// Required fields: FileName, Format, Tracks.
 type CueSheet struct {
 	Format   string
 	FileName string
+	Tracks   []Track
 }
-
-// trimChars contains the characters to be trimmed from a string.
-// These are: space, double quote, tab, newline.
-const (
-	trimChars  = ` ` + `"` + `\t` + `\n`
-	fileParams = 2
-)
 
 // Parse reads the cue sheet data from the provided reader and returns a parsed CueSheet struct.
 func Parse(reader io.Reader) (*CueSheet, error) {
 	scanner := bufio.NewScanner(reader)
-	c := &CueSheet{}
+	c := &CueSheet{Tracks: []Track{}}
 
 	var lineNr int
 	for scanner.Scan() {
@@ -37,13 +48,13 @@ func Parse(reader io.Reader) (*CueSheet, error) {
 			continue
 		}
 		if err := c.parseLine(line); err != nil {
-			return nil, fmt.Errorf("line %d:\t%s:\n\t%w", lineNr, line, err)
+			return nil, fmt.Errorf("error: line %d:\t%s:\n\t%w", lineNr, line, err)
 		}
 	}
 	if err := c.validate(); err != nil {
 		return nil, fmt.Errorf("invalid cue sheet: %w", err)
 	}
-	slog.Info("cue sheet parsed correctly", "file", c.FileName, "format", c.Format, "lines", lineNr)
+	slog.Info("cue sheet parsed correctly", "file", c.FileName, "format", c.Format, "lines", lineNr, "tracks", len(c.Tracks))
 	return c, nil
 }
 
@@ -59,6 +70,8 @@ func (c *CueSheet) parseLine(line string) error {
 	switch command {
 	case "FILE":
 		err = c.parseFile(parameters)
+	case "TRACK":
+		err = c.parseTrack(parameters)
 	default:
 		return fmt.Errorf("unexpected command: %s", command)
 	}
@@ -96,6 +109,40 @@ func (c *CueSheet) parseFile(parameters []string) error {
 	return nil
 }
 
+func (c *CueSheet) parseTrack(parameters []string) error {
+	if len(parameters) != 2 {
+		return fmt.Errorf("expected %d parameters, got %d", 2, len(parameters))
+	}
+	nr := parameters[0]
+	typ := parameters[1]
+
+	if err := c.isNextTrackNr(nr); err != nil {
+		return fmt.Errorf("invalid track number: %w", err)
+	}
+
+	var track Track
+	if err := parseString(typ, &track.Type); err != nil {
+		return fmt.Errorf("error parsing track type: %w", err)
+	}
+	c.Tracks = append(c.Tracks, track)
+	return nil
+}
+
+func (c *CueSheet) isNextTrackNr(nr string) error {
+	trackNr, err := strconv.Atoi(nr)
+	if err != nil {
+		return fmt.Errorf("failed to parse track number: %w", err)
+	}
+	nextTrackNr := len(c.Tracks) + 1
+	if trackNr != nextTrackNr {
+		return fmt.Errorf("expected track number %d, got %d", nextTrackNr, trackNr)
+	}
+	if trackNr > maxTracks {
+		return fmt.Errorf("cannot have more than %d tracks", maxTracks)
+	}
+	return nil
+}
+
 // validate checks if the cue sheet has FILE and at least one TRACK command with INDEX 01.
 func (c *CueSheet) validate() error {
 	if c.FileName == "" {
@@ -103,6 +150,9 @@ func (c *CueSheet) validate() error {
 	}
 	if c.Format == "" {
 		return errors.New("missing file format")
+	}
+	if len(c.Tracks) == 0 {
+		return errors.New("missing tracks")
 	}
 	return nil
 }
