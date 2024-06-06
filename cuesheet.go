@@ -11,15 +11,18 @@ import (
 )
 
 // CueSheet represents the contents of a cue sheet file.
-// Required fields: File, Format.
+// Required fields: FileName, Format.
 type CueSheet struct {
-	Format string
-	File   string
+	Format   string
+	FileName string
 }
 
 // trimChars contains the characters to be trimmed from a string.
 // These are: space, double quote, tab, newline.
-const trimChars = ` ` + `"` + `\t` + `\n`
+const (
+	trimChars  = ` ` + `"` + `\t` + `\n`
+	fileParams = 2
+)
 
 // Parse reads the cue sheet data from the provided reader and returns a parsed CueSheet struct.
 func Parse(reader io.Reader) (*CueSheet, error) {
@@ -40,7 +43,7 @@ func Parse(reader io.Reader) (*CueSheet, error) {
 	if err := c.validate(); err != nil {
 		return nil, fmt.Errorf("invalid cue sheet: %w", err)
 	}
-	slog.Info("cue sheet parsed correctly", "file", c.File, "format", c.Format, "lines", lineNr)
+	slog.Info("cue sheet parsed correctly", "file", c.FileName, "format", c.Format, "lines", lineNr)
 	return c, nil
 }
 
@@ -57,7 +60,7 @@ func (c *CueSheet) parseLine(line string) error {
 	case "FILE":
 		err = c.parseFile(parameters)
 	default:
-		return fmt.Errorf("unexpected command: %q", command)
+		return fmt.Errorf("unexpected command: %s", command)
 	}
 	if err != nil {
 		return fmt.Errorf("error parsing %q command: %w", command, err)
@@ -80,14 +83,14 @@ func parseString(val string, field *string) error {
 }
 
 func (c *CueSheet) parseFile(parameters []string) error {
-	if len(parameters) < 2 {
-		return fmt.Errorf("expected at least %d parameters, got %d", 2, len(parameters))
+	if len(parameters) != fileParams {
+		return fmt.Errorf("expected %d parameters, got %d", fileParams, len(parameters))
 	}
 	last := len(parameters) - 1
 	if err := parseString(parameters[last], &c.Format); err != nil {
 		return fmt.Errorf("error parsing FILE format: %w", err)
 	}
-	if err := parseString(strings.Join(parameters[:last], " "), &c.File); err != nil {
+	if err := parseString(strings.Join(parameters[:last], " "), &c.FileName); err != nil {
 		return fmt.Errorf("error parsing FILE name: %w", err)
 	}
 	return nil
@@ -95,11 +98,11 @@ func (c *CueSheet) parseFile(parameters []string) error {
 
 // validate checks if the cue sheet has FILE and at least one TRACK command with INDEX 01.
 func (c *CueSheet) validate() error {
-	if c.File == "" {
+	if c.FileName == "" {
 		return errors.New("missing file name")
 	}
 	if c.Format == "" {
-		return errors.New("missing format")
+		return errors.New("missing file format")
 	}
 	return nil
 }
