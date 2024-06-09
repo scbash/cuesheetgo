@@ -1,7 +1,8 @@
-# CueSheetGo: Go Library for Handling Cue Sheet Files
+# Cue
 ![Coverage](https://img.shields.io/badge/Coverage-95.8%25-brightgreen)
 
-**CueSheetGo** is a lightweight Go library designed for parsing, generating, and manipulating Cue Sheet (`.cue`) files. Cue Sheet files are commonly used in conjunction with audio file formats like WAV, FLAC, and APE to describe the layout of tracks and other metadata.
+**Cue** is a Go library for parsing, generating, and manipulating Cue Sheet (`.cue`) files. Cue Sheet files are commonly
+used in conjunction with audio file formats like WAV, FLAC, and APE to describe the layout of tracks and other metadata.
 
 ## Features
 
@@ -12,10 +13,10 @@
 
 ## Installation
 
-To use CueSheetGo in your project, simply import it using Go modules:
+To use Cue in your project, import it using Go modules:
 
 ```sh
-go get github.com/lorena-mv/cuesheetgo
+go get github.com/lmvgo/cue
 ```
 
 ## Usage
