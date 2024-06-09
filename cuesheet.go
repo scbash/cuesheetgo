@@ -95,11 +95,11 @@ func (c *CueSheet) parseLine(line string) error {
 
 func assignValue[T comparable](val T, field *T) error {
 	zero := reflect.Zero(reflect.TypeOf(*field)).Interface()
-	if *field == zero {
-		*field = val
-		return nil
+	if *field != zero {
+		return fmt.Errorf("field already set: %v", *field)
 	}
-	return fmt.Errorf("field already set: %v", *field)
+	*field = val
+	return nil
 }
 
 func parseString(val string, field *string) error {
@@ -172,7 +172,7 @@ func (c *CueSheet) parseIndex(parameters []string) error {
 
 	var minutes, seconds, frames int
 	if _, err = fmt.Sscanf(indexPoint, "%2d:%2d:%2d", &minutes, &seconds, &frames); err != nil {
-		return fmt.Errorf("error parsing index point: %w", err)
+		return fmt.Errorf("error parsing timestamp and frame: %w", err)
 	}
 	duration := time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
 	index := IndexPoint{Timestamp: duration, Frame: frames}

@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -33,12 +34,38 @@ var minimalCueSheet = CueSheet{
 	},
 }
 
+var allCueSheet = CueSheet{
+	FileName: "sample.flac",
+	Format:   "WAVE",
+	Tracks: []Track{
+		{
+			Type: "AUDIO",
+			Index01: IndexPoint{
+				Frame:     0,
+				Timestamp: time.Duration(1) * time.Second,
+			},
+		},
+		{
+			Type: "AUDIO",
+			Index01: IndexPoint{
+				Frame:     0,
+				Timestamp: time.Duration(1) * time.Minute,
+			},
+		},
+	},
+}
+
 func TestParseCueSheets(t *testing.T) {
 	tcs := []testCase{
 		{
 			name:     "MinimalCueSheet",
 			input:    open(t, "minimal.cue"),
 			expected: minimalCueSheet,
+		},
+		{
+			name:     "AllFieldsCueSheet",
+			input:    open(t, "all.cue"),
+			expected: allCueSheet,
 		},
 		{
 			name:        "EmptyCueSheet",
@@ -121,6 +148,39 @@ func TestParseTrackCommand(t *testing.T) {
 			name:        "ExceedsMaxTracks",
 			input:       strings.NewReader(generateExceedsMaxTracks()),
 			expectedErr: errors.New("cannot have more than 99 tracks"),
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, runTest(tc))
+	}
+}
+
+func TestParseIndex(t *testing.T) {
+	tcs := []testCase{
+		{
+			name:        "OverlappingFrames",
+			input:       open(t, path.Join("index", "overlapping_frame.cue")),
+			expectedErr: errors.New("overlapping indices in tracks 1 and 2"),
+		},
+		{
+			name:        "OverlappingTimestamps",
+			input:       open(t, path.Join("index", "overlapping_timestamp.cue")),
+			expectedErr: errors.New("overlapping indices in tracks 1 and 2"),
+		},
+		{
+			name:        "NonNumericIndexNumber",
+			input:       open(t, path.Join("index", "non_numeric.cue")),
+			expectedErr: errors.New("failed to parse index number"),
+		},
+		{
+			name:        "InvalidTimeFormat",
+			input:       open(t, path.Join("index", "format.cue")),
+			expectedErr: errors.New("error parsing timestamp and frame"),
+		},
+		{
+			name:        "UnorderedIndex",
+			input:       open(t, path.Join("index", "unordered.cue")),
+			expectedErr: errors.New("expected index number 1, got 2"),
 		},
 	}
 	for _, tc := range tcs {
