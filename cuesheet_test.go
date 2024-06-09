@@ -182,6 +182,16 @@ func TestParseIndex(t *testing.T) {
 			input:       open(t, path.Join("index", "unordered.cue")),
 			expectedErr: errors.New("expected index number 1, got 2"),
 		},
+		{
+			name:        "InsufficientIndexParams",
+			input:       open(t, path.Join("index", "insufficient.cue")),
+			expectedErr: errors.New("expected 2 parameters, got 1"),
+		},
+		{
+			name:        "ExcessiveIndexParams",
+			input:       open(t, path.Join("index", "excessive.cue")),
+			expectedErr: errors.New("expected 2 parameters, got 3"),
+		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, runTest(tc))

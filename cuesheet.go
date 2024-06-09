@@ -58,7 +58,7 @@ func Parse(reader io.Reader) (*CueSheet, error) {
 			continue
 		}
 		if err := c.parseLine(line); err != nil {
-			return nil, fmt.Errorf("error: line %d:\t%s:\n\t%w", lineNr, line, err)
+			return nil, fmt.Errorf("line %d:\t%s:\n\t%w", lineNr, line, err)
 		}
 	}
 	if err := c.validate(); err != nil {
