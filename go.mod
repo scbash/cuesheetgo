@@ -1,4 +1,4 @@
-module cuesheetgo
+module github.com/lmvgo/cue
 
 go 1.22.0
 
