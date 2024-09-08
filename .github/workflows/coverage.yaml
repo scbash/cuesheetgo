@@ -46,12 +46,13 @@ jobs:
           files: README.md
 
       - name: Create pull request
-        if: ${{ steps.commit-changes.outputs.changes == 'true' }}
+        if: ${{ steps.verify-changed-files.outputs.files_changed == 'true' }}
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.CREATE_PR_CLASSIC }}
           branch: ${{ github.event_name == 'pull_request' && 'update-coverage-badge-pr-' || 'update-coverage-badge' }}${{ github.event.pull_request.number || '-main' }}
           delete-branch: true
+          base: ${{ github.event.pull_request.head.ref || 'main' }}
           title: Update test coverage badge
           body: |
             This PR updates the test coverage badge in the README file.
