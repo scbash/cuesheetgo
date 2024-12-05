@@ -38,6 +38,7 @@ var RemDateCommand = Command{Name: "DATE", MinParams: 1}
 type IndexPoint struct {
 	Frame     int
 	Timestamp time.Duration
+	valid     bool
 }
 
 // Track represents a single track in a cue sheet file.
@@ -215,7 +216,7 @@ func (c *CueSheet) parseTrackIndex01(parameters []string) error {
 		return fmt.Errorf("failed to parse index number: %w", err)
 	}
 	if indexNr != 1 {
-		return fmt.Errorf("expected index number 1, got %d", indexNr)
+		return nil // CUE sheets can have _lots_ of indexes, just skip this one...
 	}
 
 	var minutes, seconds, frames int
@@ -223,7 +224,7 @@ func (c *CueSheet) parseTrackIndex01(parameters []string) error {
 		return fmt.Errorf("error parsing timestamp and frame: %w", err)
 	}
 	duration := time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
-	index := IndexPoint{Timestamp: duration, Frame: frames}
+	index := IndexPoint{Timestamp: duration, Frame: frames, valid: true}
 	lastTrack := c.Tracks[len(c.Tracks)-1]
 	return assignValue(index, &lastTrack.Index01)
 }
@@ -317,6 +318,9 @@ func (c *CueSheet) validateTracks() error {
 	for i, track := range c.Tracks {
 		if track.Type == "" {
 			return errors.New("missing track type")
+		}
+		if !track.Index01.valid {
+			return fmt.Errorf("track %d missing Index01", i+1)
 		}
 		if i < len(c.Tracks)-1 {
 			var (

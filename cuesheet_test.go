@@ -30,6 +30,11 @@ var minimalCueSheet = CueSheet{
 	Tracks: []*Track{
 		{
 			Type: "AUDIO",
+			Index01: IndexPoint{
+				Frame:     0,
+				Timestamp: time.Duration(0),
+				valid:     true,
+			},
 		},
 	},
 }
@@ -48,6 +53,7 @@ var allCueSheet = CueSheet{
 			Index01: IndexPoint{
 				Frame:     0,
 				Timestamp: time.Duration(1) * time.Second,
+				valid:     true,
 			},
 		},
 		{
@@ -56,6 +62,7 @@ var allCueSheet = CueSheet{
 			Index01: IndexPoint{
 				Frame:     0,
 				Timestamp: time.Duration(1) * time.Minute,
+				valid:     true,
 			},
 		},
 	},
@@ -71,6 +78,7 @@ var cueSheetWithTrackTitleAndNoAlbumTitle = CueSheet{
 			Index01: IndexPoint{
 				Frame:     0,
 				Timestamp: time.Duration(1) * time.Second,
+				valid:     true,
 			},
 		},
 		{
@@ -79,6 +87,7 @@ var cueSheetWithTrackTitleAndNoAlbumTitle = CueSheet{
 			Index01: IndexPoint{
 				Frame:     0,
 				Timestamp: time.Duration(1) * time.Minute,
+				valid:     true,
 			},
 		},
 	},
@@ -93,6 +102,7 @@ var cueSheetWithInterleavedTrackTitles = CueSheet{
 			Index01: IndexPoint{
 				Frame:     0,
 				Timestamp: time.Duration(1) * time.Second,
+				valid:     true,
 			},
 		},
 		{
@@ -101,6 +111,7 @@ var cueSheetWithInterleavedTrackTitles = CueSheet{
 			Index01: IndexPoint{
 				Frame:     0,
 				Timestamp: time.Duration(1) * time.Minute,
+				valid:     true,
 			},
 		},
 	},
@@ -226,7 +237,7 @@ func TestParseTrackIndexCommand(t *testing.T) {
 		{
 			name:        "UnorderedIndex",
 			input:       open(t, path.Join("index", "unordered.cue")),
-			expectedErr: errors.New("expected index number 1, got 2"),
+			expectedErr: errors.New("track 1 missing Index01"),
 		},
 		{
 			name:        "InsufficientIndexParams",
