@@ -62,7 +62,17 @@ type CueSheet struct {
 
 // Parse reads the cue sheet data from the provided reader and returns a parsed CueSheet struct.
 func Parse(reader io.Reader) (*CueSheet, error) {
-	scanner := bufio.NewScanner(reader)
+	bomReader := bufio.NewReader(reader)
+	maybeBom, _, err := bomReader.ReadRune()
+	if err != nil {
+		return nil, fmt.Errorf("error reading first rune: %s", err)
+	}
+	if maybeBom != 65279 { // UTF-8 BOM, see https://en.wikipedia.org/wiki/Byte_order_mark#Byte-order_marks_by_encoding
+		bomReader.UnreadRune()
+	}
+	// TODO: add other BOMs (UTF-16 etc)
+
+	scanner := bufio.NewScanner(bomReader)
 	c := &CueSheet{Tracks: []*Track{}}
 
 	var lineNr int
