@@ -43,9 +43,10 @@ type IndexPoint struct {
 // Track represents a single track in a cue sheet file.
 // Required fields: Index01, Type.
 type Track struct {
-	Title   string
-	Type    string
-	Index01 IndexPoint
+	Title     string
+	Type      string
+	Index01   IndexPoint
+	Performer string
 }
 
 // CueSheet represents the contents of a cue sheet file.
@@ -152,8 +153,18 @@ func (c *CueSheet) parsePerformer(parameters []string) error {
 	if err := PerformerCommand.validateParameters(len(parameters)); err != nil {
 		return fmt.Errorf("invalid PERFORMER parameters: %w", err)
 	}
-	if err := parseString(strings.Join(parameters, " "), &c.AlbumPerformer); err != nil {
-		return fmt.Errorf("error parsing PERFORMER parameters: %w", err)
+	nrTracks := len(c.Tracks)
+	if nrTracks == 0 {
+		// no tracks yet - try setting album title
+		if err := parseString(strings.Join(parameters, " "), &c.AlbumPerformer); err != nil {
+			return fmt.Errorf("error parsing album PERFORMER: %w", err)
+		}
+		return nil
+	}
+	currentTrack := c.Tracks[nrTracks-1]
+	if err := parseString(strings.Join(parameters, " "), &currentTrack.Performer); err != nil {
+		// current track performer is already set
+		return fmt.Errorf("error parsing track %d PERFORMER: %w", nrTracks-1, err)
 	}
 	return nil
 }
